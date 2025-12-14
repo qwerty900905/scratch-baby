@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>짱이의 성별은?</title>
+
+<style>
+  body{
+    margin:0;
+    background:#f4f6f8;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+    font-family: system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  }
+
+  .card{
+    position:relative;
+    width:90vw;
+    max-width:380px;
+    aspect-ratio: 3 / 4;
+    border-radius:28px;
+    background:#fff;
+    box-shadow:0 18px 40px rgba(0,0,0,.16);
+    overflow:hidden;
+  }
+
+  /* ===== 제목 ===== */
+  .title{
+    position:absolute;
+    top:18px;
+    left:16px;
+    right:16px;
+    z-index:3;
+    text-align:center;
+    line-height:1.05;
+  }
+  .title .t1{
+    font-size:50px;
+    font-weight:900;
+    color:#111;
+  }
+  .title .t2{
+    margin-top:6px;
+    font-size:50px;
+    font-weight:900;
+  }
+  .boy{ color:#8DBBFF; }
+  .girl{ color:#FF8FB5; }
+  .rest{ color:#111; }
+
+  .baby{
+    position:absolute;
+    inset:0;
+    z-index:0;
+  }
+
+  /* ===== 복권 ===== */
+  .ticket{
+    position:absolute;
+    left:50%;
+    transform:translateX(-50%);
+    bottom:30px;
+    width:78%;
+    height:24%;
+    border-radius:16px;
+    overflow:hidden;
+    background:#BFC5CF;
+    z-index:2;
+  }
+
+  .reveal{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    pointer-events:none;
+  }
+  .revealText{
+    font-size:50px;
+    font-weight:900;
+    background:rgba(255,255,255,.85);
+    padding:14px 18px;
+    border-radius:16px;
+  }
+
+  canvas{
+    position:absolute;
+    inset:0;
+    touch-action:none;
+  }
+
+  .hint{
+    position:absolute;
+    bottom:14px;
+    left:16px;
+    right:16px;
+    text-align:center;
+    font-size:12px;
+    color:#666;
+  }
+</style>
+</head>
+
+<body>
+<div class="card">
+  <!-- 제목 -->
+  <div class="title">
+    <div class="t1">짱이의 성별은?</div>
+    <div class="t2">
+      <span class="boy">Boy</span>
+      <span class="rest"> or </span>
+      <span class="girl">Girl</span>
+    </div>
+  </div>
+
+  <!-- ===== 아기 얼굴 (scale 0.92 적용) ===== -->
+  <svg class="baby" viewBox="0 0 300 400" xmlns="http://www.w3.org/2000/svg">
+    <rect width="300" height="400" fill="#FFEFF4"/>
+
+    <defs>
+      <!-- 얼굴 영역 클리핑 -->
+      <clipPath id="headClip">
+        <circle cx="150" cy="180" r="78"/>
+      </clipPath>
+    </defs>
+
+    <!-- 얼굴 전체를 그룹으로 묶고 8% 축소 + 정중앙 x150 y180이고 아기얼굴을 위에서 떨어져야해서 -28 살짝 아래 보정 -->
+    <g transform="translate(150 180) scale(0.92) translate(-150 -162)">
+      <!-- 얼굴 -->
+      <circle cx="150" cy="180" r="78" fill="#FFE0C6"/>
+
+      <!-- 귀 -->
+      <ellipse cx="75" cy="185" rx="16" ry="22" fill="#FFD3B8"/>
+      <ellipse cx="225" cy="185" rx="16" ry="22" fill="#FFD3B8"/>
+
+      <!-- 머리카락 3가닥 (얼굴 안쪽) -->
+      <g clip-path="url(#headClip)">
+        <path d="M138 120 C132 114 132 104 138 98"
+              stroke="#7A4A2E" stroke-width="7" fill="none" stroke-linecap="round"/>
+        <path d="M150 120 C144 112 146 102 156 98"
+              stroke="#7A4A2E" stroke-width="7" fill="none" stroke-linecap="round"/>
+        <path d="M162 120 C156 112 160 104 168 100"
+              stroke="#7A4A2E" stroke-width="7" fill="none" stroke-linecap="round"/>
+      </g>
+
+      <!-- 눈 -->
+      <circle cx="125" cy="170" r="5.5" fill="#3A2A20"/>
+      <circle cx="175" cy="170" r="5.5" fill="#3A2A20"/>
+
+      <!-- 볼 -->
+      <circle cx="110" cy="195" r="14" fill="#F6A5A5" opacity="0.65"/>
+      <circle cx="190" cy="195" r="14" fill="#F6A5A5" opacity="0.65"/>
+
+      <!-- 코 -->
+      <circle cx="150" cy="182" r="2.2" fill="#E0B199"/>
+
+      <!-- 쪽쪽이 -->
+      <circle cx="150" cy="210" r="18" fill="#6EC9F5"/>
+      <circle cx="150" cy="210" r="10" fill="#AEE4FA"/>
+      <circle cx="150" cy="210" r="4.5" fill="#5AB6E5"/>
+    </g>
+  </svg>
+
+  <!-- 복권 -->
+  <div class="ticket" id="ticket">
+    <div class="reveal">
+      <div id="resultText" class="revealText girl">Girl</div>
+    </div>
+    <canvas id="scratch"></canvas>
+  </div>
+
+  <div class="hint">복권 부분만 손가락으로 긁어보세요</div>
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById("scratch");
+  const ctx = canvas.getContext("2d");
+  const ticket = document.getElementById("ticket");
+  const BRUSH = 22;
+
+  function resize(){
+    const r = ticket.getBoundingClientRect();
+    canvas.width = r.width;
+    canvas.height = r.height;
+    ctx.fillStyle = "#9FA6B2";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.globalCompositeOperation = "destination-out";
+  }
+
+  function pos(e){
+    const r = canvas.getBoundingClientRect();
+    return {x:e.clientX-r.left,y:e.clientY-r.top};
+  }
+
+  let down=false;
+  canvas.addEventListener("pointerdown",e=>{
+    down=true;
+    const p=pos(e);
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,BRUSH,0,Math.PI*2);
+    ctx.fill();
+  });
+  canvas.addEventListener("pointermove",e=>{
+    if(!down)return;
+    const p=pos(e);
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,BRUSH,0,Math.PI*2);
+    ctx.fill();
+  });
+  ["pointerup","pointerleave","pointercancel"].forEach(ev =>
+    canvas.addEventListener(ev,()=>down=false)
+  );
+
+  resize();
+})();
+</script>
+</body>
+</html>
